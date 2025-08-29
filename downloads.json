@@ -1,0 +1,152 @@
+{
+  "id": "6c2bcfac-155d-4a5d-b35b-58cdf829a87c",
+  "revision": 0,
+  "last_node_id": 6,
+  "last_link_id": 0,
+  "nodes": [
+    {
+      "id": 3,
+      "type": "RequiresAsset",
+      "pos": [
+        -46.407142639160156,
+        44.74488830566406
+      ],
+      "size": [
+        519.3612670898438,
+        130
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "RequiresAsset"
+      },
+      "widgets_values": [
+        "https://huggingface.co/ServiceStack/comfy-gateway/resolve/main/classifier.tflite",
+        "classifiers",
+        "classifier.tflite",
+        ""
+      ]
+    },
+    {
+      "id": 4,
+      "type": "RequiresAsset",
+      "pos": [
+        -46.407142639160156,
+        238.95761108398438
+      ],
+      "size": [
+        519.3612670898438,
+        130
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "RequiresAsset"
+      },
+      "widgets_values": [
+        "https://huggingface.co/ServiceStack/comfy-gateway/resolve/main/erax_nsfw_yolo11m.pt",
+        "classifiers",
+        "erax_nsfw_yolo11m.pt",
+        ""
+      ]
+    },
+    {
+      "id": 5,
+      "type": "RequiresAsset",
+      "pos": [
+        -46.407142639160156,
+        430.17724609375
+      ],
+      "size": [
+        519.3612670898438,
+        130
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "RequiresAsset"
+      },
+      "widgets_values": [
+        "https://huggingface.co/ServiceStack/comfy-gateway/resolve/main/wd-v1-4-moat-tagger-v2.csv",
+        "classifiers",
+        "wd-v1-4-moat-tagger-v2.csv",
+        ""
+      ]
+    },
+    {
+      "id": 6,
+      "type": "RequiresAsset",
+      "pos": [
+        -46.407142639160156,
+        630.2765502929688
+      ],
+      "size": [
+        519.3612670898438,
+        130
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "RequiresAsset"
+      },
+      "widgets_values": [
+        "https://huggingface.co/ServiceStack/comfy-gateway/resolve/main/wd-v1-4-moat-tagger-v2.onnx",
+        "classifiers",
+        "wd-v1-4-moat-tagger-v2.onnx",
+        ""
+      ]
+    },
+    {
+      "id": 2,
+      "type": "RequiresAsset",
+      "pos": [
+        -46.407142639160156,
+        -148.8426971435547
+      ],
+      "size": [
+        519.3612670898438,
+        130
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "RequiresAsset"
+      },
+      "widgets_values": [
+        "https://huggingface.co/ServiceStack/comfy-gateway/resolve/main/640m.onnx",
+        "classifiers",
+        "640m.onnx",
+        ""
+      ]
+    }
+  ],
+  "links": [],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1.0610764609500154,
+      "offset": [
+        488.87507282261197,
+        327.8014341786715
+      ]
+    },
+    "frontendVersion": "1.25.10"
+  },
+  "version": 0.4
+}
