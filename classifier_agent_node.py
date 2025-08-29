@@ -111,17 +111,21 @@ def listen_to_messages_poll():
                             global g_audio_model
                             if g_audio_model is None:
                                 try:
+                                    start_time = time.time()
                                     g_audio_model = load_audio_model(models_dir=models_dir)
+                                    _log(f"Loaded audio model in {time.time() - start_time:.2f}s")
                                 except Exception as ex:
                                     _log(f"Error loading audio model: {ex}")
 
                             if g_audio_model is not None:
                                 try:
+                                    start_time = time.time()
                                     file_ext = os.path.splitext(task.url)[1].lower()
                                     format = file_ext[1:]
                                     sample_rate, wav_data = convert_to_wav_data(io.BytesIO(response.content), format=format)
                                     tags = get_audio_tags_from_wav(g_audio_model, sample_rate, wav_data, debug=True)  # noqa: F821
                                     update.tags = tags
+                                    _log(f"Classified {type} Artifact {task.id} with {len(update.tags)} tags in {time.time() - start_time:.2f}s")
                                 except Exception as ex:
                                     _log(f"Error getting audio tags: {ex}")
 
