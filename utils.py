@@ -5,6 +5,8 @@ import traceback
 import requests
 import json
 import uuid
+import sys
+import shutil
 
 from folder_paths import base_path, get_user_directory
 from servicestack import JsonServiceClient, WebServiceException, ResponseStatus, EmptyResponse, printdump, from_json
@@ -81,7 +83,7 @@ def device_id():
 
 def _log(message):
     """Helper method for logging from the global polling task."""
-    print(f"{g_logger_prefix} {message}")
+    print(f"{g_logger_prefix} {message}", flush=True)
 
 def _log_error(message, e):
     """Helper method for logging errors from the global polling task."""
@@ -97,9 +99,9 @@ def _log_error(message, e):
 
     if status is not None:
         error_code = f"[{status.error_code}] " if status.error_code != 'Exception' else ""
-        print(f"{g_logger_prefix} {message} {error_code}{status.message}")
+        print(f"{g_logger_prefix} {message} {error_code}{status.message}", flush=True)
     else:
-        print(f"{g_logger_prefix} {message} {type(e)} {e}")
+        print(f"{g_logger_prefix} {message} {type(e)} {e}", flush=True)
 
 def load_config(agent=None, default_config=None):
     global DEVICE_ID, g_config, g_logger_prefix
@@ -147,3 +149,68 @@ def save_config(config):
     # _log("Saving config: " + json.dumps(g_config))
     with open(os.path.join(g_node_dir, "config.json"), "w") as f:
         json.dump(g_config, f, indent=4)
+
+def detect_python_environment():
+    """
+    Detect the current Python environment and return appropriate pip command.
+    Returns a list of command components for subprocess.run()
+    """
+    python_exe = sys.executable
+
+    # Check for conda environment
+    if 'CONDA_DEFAULT_ENV' in os.environ or 'CONDA_PREFIX' in os.environ:
+        # Try to find conda executable
+        conda_exe = shutil.which('conda')
+        if conda_exe:
+            _log(f"Detected conda environment: {os.environ.get('CONDA_DEFAULT_ENV', 'unknown')}")
+            return [conda_exe, 'run', '-n', os.environ.get('CONDA_DEFAULT_ENV', 'base'), 'pip']
+        else:
+            _log("Conda environment detected but conda executable not found, falling back to python -m pip")
+
+    # Check for uv environment
+    if 'UV_PROJECT_ROOT' in os.environ or shutil.which('uv'):
+        uv_exe = shutil.which('uv')
+        if uv_exe:
+            _log("Detected uv environment")
+            return [uv_exe, 'pip']
+        else:
+            _log("UV environment detected but uv executable not found, falling back to python -m pip")
+
+    # Check for virtual environment
+    if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
+        _log(f"Detected virtual environment: {sys.prefix}")
+
+    # Default to using the current Python executable with pip module
+    _log(f"Using Python executable: {python_exe}")
+    return [python_exe, '-m', 'pip']
+
+def get_pip_install_command(package_or_requirements_file, is_requirements_file=False):
+    """
+    Get the appropriate pip install command for the current environment.
+
+    Args:
+        package_or_requirements_file: Package name or path to requirements.txt
+        is_requirements_file: Whether the input is a requirements file
+
+    Returns:
+        List of command components for subprocess.run()
+    """
+    pip_cmd = detect_python_environment()
+
+    if is_requirements_file:
+        return pip_cmd + ['install', '-r', package_or_requirements_file]
+    else:
+        return pip_cmd + ['install', package_or_requirements_file]
+
+def get_pip_uninstall_command(package_name):
+    """
+    Get the appropriate pip uninstall command for the current environment.
+
+    Args:
+        package_name: Name of the package to uninstall
+
+    Returns:
+        List of command components for subprocess.run()
+    """
+    pip_cmd = detect_python_environment()
+    return pip_cmd + ['uninstall', '-y', package_name]
