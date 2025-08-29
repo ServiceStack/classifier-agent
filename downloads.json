@@ -1,7 +1,7 @@
 {
   "id": "6c2bcfac-155d-4a5d-b35b-58cdf829a87c",
   "revision": 0,
-  "last_node_id": 6,
+  "last_node_id": 7,
   "last_link_id": 0,
   "nodes": [
     {
@@ -132,6 +132,29 @@
         "classifiers",
         "640m.onnx",
         ""
+      ]
+    },
+    {
+      "id": 7,
+      "type": "RequiresCustomNode",
+      "pos": [
+        495.11114501953125,
+        -140.20301818847656
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "RequiresCustomNode"
+      },
+      "widgets_values": [
+        "ServiceStack/classifier-agent"
       ]
     }
   ],
