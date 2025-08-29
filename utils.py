@@ -214,3 +214,15 @@ def get_pip_uninstall_command(package_name):
     """
     pip_cmd = detect_python_environment()
     return pip_cmd + ['uninstall', '-y', package_name]
+
+def utf8str(strOrBytes):
+    if strOrBytes is None:
+        return ''
+    s = ''
+    if isinstance(strOrBytes, str):
+        s = strOrBytes
+    else:
+        s = strOrBytes.decode('utf-8')
+    if isinstance(s, str):
+        s = s.strip()
+    return s
