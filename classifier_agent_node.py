@@ -18,7 +18,7 @@ from servicestack import ResponseStatus
 from PIL import Image
 
 from .classifier import load_image_models, classify_image
-from .audio_classifer import convert_to_wav_data, get_audio_tags_from_wav, load_audio_model
+from .audio_classifier import convert_to_wav_data, get_audio_tags_from_wav, load_audio_model
 from .imagehash import phash, dominant_color_hex
 from .utils import _log_error, create_client, config_str, _log, device_id, headers_json, load_config, to_error_status
 
@@ -32,6 +32,8 @@ from .dtos import (
     CompleteArtifactClassificationTask,
     Ratings,
 )
+
+USE_UV=True
 
 g_client = None
 g_models = None
@@ -86,10 +88,10 @@ def listen_to_messages_poll():
                         # download image from url and store in tmp output folder
                         url = urllib.parse.urljoin(config_str('url'), task.url)
                         _log(f"Downloading {url}")
-                        response = requests.get(url, headers=headers_json())
-                        response.raise_for_status()
-
                         if task.type == AssetType.IMAGE:
+                            response = requests.get(url, headers=headers_json())
+                            response.raise_for_status()
+
                             with Image.open(io.BytesIO(response.content)) as img:
                                 update.phash = f"{phash(img)}"
                                 update.color = dominant_color_hex(img)
@@ -107,27 +109,46 @@ def listen_to_messages_poll():
                             _log(f"Classified {type} Artifact {task.id} with {len(update.tags)} tags, {len(update.objects)} objects, {len(update.categories)} categories")
                         elif task.type == AssetType.AUDIO:
 
-                            # lasy load Audio Model
-                            global g_audio_model
-                            if g_audio_model is None:
-                                try:
-                                    start_time = time.time()
-                                    g_audio_model = load_audio_model(models_dir=models_dir)
-                                    _log(f"Loaded audio model in {time.time() - start_time:.2f}s")
-                                except Exception as ex:
-                                    _log(f"Error loading audio model: {ex}")
+                            if USE_UV:
+                                    # Need to run in process because of mediapipe outdated dependency on numpy v1
+                                    try:
+                                        start_time = time.time()
+                                        script_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "audio_classifier.py")
+                                        tags_json = subprocess.check_output(['uv', 'run', script_path, url], text=True)
+                                        print(tags_json)
+                                        tags = json.loads(tags_json)
+                                        update.tags = tags
+                                        _log(f"Classified {type} Artifact {task.id} with {len(update.tags)} tags in {time.time() - start_time:.2f}s")
+                                    except subprocess.CalledProcessError as e:
+                                        _log(f"Error getting audio tags: {e.stderr}")
+                                        print("stdout: {e.stdout}")
+                                    except Exception as ex:
+                                        _log(f"Error getting audio tags: {ex}")
+                            else:
+                                response = requests.get(url, headers=headers_json())
+                                response.raise_for_status()
 
-                            if g_audio_model is not None:
-                                try:
-                                    start_time = time.time()
-                                    file_ext = os.path.splitext(task.url)[1].lower()
-                                    format = file_ext[1:]
-                                    sample_rate, wav_data = convert_to_wav_data(io.BytesIO(response.content), format=format)
-                                    tags = get_audio_tags_from_wav(g_audio_model, sample_rate, wav_data, debug=True)  # noqa: F821
-                                    update.tags = tags
-                                    _log(f"Classified {type} Artifact {task.id} with {len(update.tags)} tags in {time.time() - start_time:.2f}s")
-                                except Exception as ex:
-                                    _log(f"Error getting audio tags: {ex}")
+                                # lasy load Audio Model
+                                global g_audio_model
+                                if g_audio_model is None:
+                                    try:
+                                        start_time = time.time()
+                                        g_audio_model = load_audio_model(models_dir=models_dir)
+                                        _log(f"Loaded audio model in {time.time() - start_time:.2f}s")
+                                    except Exception as ex:
+                                        _log(f"Error loading audio model: {ex}")
+
+                                if g_audio_model is not None:
+                                    try:
+                                        start_time = time.time()
+                                        file_ext = os.path.splitext(task.url)[1].lower()
+                                        format = file_ext[1:]
+                                        sample_rate, wav_data = convert_to_wav_data(io.BytesIO(response.content), format=format)
+                                        tags = get_audio_tags_from_wav(g_audio_model, sample_rate, wav_data, debug=True)  # noqa: F821
+                                        update.tags = tags
+                                        _log(f"Classified {type} Artifact {task.id} with {len(update.tags)} tags in {time.time() - start_time:.2f}s")
+                                    except Exception as ex:
+                                        _log(f"Error getting audio tags: {ex}")
 
                         else:
                             update.error = ResponseStatus(errorCode="NotImplemented", message=f"Unsupported artifact type: {task.type}")
