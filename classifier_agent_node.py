@@ -33,7 +33,8 @@ from .dtos import (
     Ratings,
 )
 
-USE_UV=True
+USE_HTTP=True
+USE_UV=False
 
 g_client = None
 g_models = None
@@ -109,21 +110,26 @@ def listen_to_messages_poll():
                             _log(f"Classified {type} Artifact {task.id} with {len(update.tags)} tags, {len(update.objects)} objects, {len(update.categories)} categories")
                         elif task.type == AssetType.AUDIO:
 
-                            if USE_UV:
-                                    # Need to run in process because of mediapipe outdated dependency on numpy v1
-                                    try:
-                                        start_time = time.time()
-                                        script_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "audio_classifier.py")
-                                        tags_json = subprocess.check_output(['uv', 'run', script_path, url], text=True)
-                                        print(tags_json)
-                                        tags = json.loads(tags_json)
-                                        update.tags = tags
-                                        _log(f"Classified {type} Artifact {task.id} with {len(update.tags)} tags in {time.time() - start_time:.2f}s")
-                                    except subprocess.CalledProcessError as e:
-                                        _log(f"Error getting audio tags: {e.stderr}")
-                                        print("stdout: {e.stdout}")
-                                    except Exception as ex:
-                                        _log(f"Error getting audio tags: {ex}")
+                            if USE_HTTP:
+                                start_time = time.time()
+                                response = requests.get('http://localhost:5005/audio/tags', params={"url":url}, headers=headers_json())
+                                response.raise_for_status()
+                                update.tags = response.json()
+                            elif USE_UV:
+                                # Need to run in process because of mediapipe outdated dependency on numpy v1
+                                try:
+                                    start_time = time.time()
+                                    script_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "audio_classifier.py")
+                                    tags_json = subprocess.check_output(['uv', 'run', script_path, url], text=True)
+                                    print(tags_json)
+                                    tags = json.loads(tags_json)
+                                    update.tags = tags
+                                    _log(f"Classified {type} Artifact {task.id} with {len(update.tags)} tags in {time.time() - start_time:.2f}s")
+                                except subprocess.CalledProcessError as e:
+                                    _log(f"Error getting audio tags: {e.stderr}")
+                                    print("stdout: {e.stdout}")
+                                except Exception as ex:
+                                    _log(f"Error getting audio tags: {ex}")
                             else:
                                 response = requests.get(url, headers=headers_json())
                                 response.raise_for_status()
