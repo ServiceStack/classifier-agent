@@ -1,5 +1,6 @@
 
 import os
+import re
 import subprocess
 import traceback
 import requests
@@ -8,17 +9,30 @@ import uuid
 import sys
 import shutil
 
-from folder_paths import base_path, get_user_directory
-from servicestack import JsonServiceClient, WebServiceException, ResponseStatus, EmptyResponse, printdump, from_json
+# from folder_paths import base_path, get_user_directory
+from servicestack import JsonServiceClient, WebServiceException, ResponseStatus, EmptyResponse, from_json
 
 VERSION = 1
 DEVICE_ID = None
+
+class Paths(object):
+    def __init__(self, base, models=None, user=None, agent=None):
+        self.base = base
+        self.models = models or os.path.join(base, "models")
+        self.user = user or os.path.join(base, "user")
+        self.agent = agent or os.path.join(self.user, "comfy_agent")
+
 g_config = {}
 g_headers_json={"Content-Type": "application/json"}
 g_headers={}
 
 g_logger_prefix = "[agent]"
-g_node_dir = os.path.join(get_user_directory(), "comfy_agent")
+g_base_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../")
+g_paths = Paths(g_base_path)
+
+def paths():
+    global g_paths
+    return g_paths
 
 def urljoin(*args):
     trailing_slash = '/' if args[-1].endswith('/') else ''
@@ -65,9 +79,13 @@ def config_str(name:str):
 
 def get_comfyui_version():
     # comfyui_version.py is a generated file that's sometimes not available
-    if os.path.exists(os.path.join(base_path, "comfyui_version.py")):
-        from comfyui_version import __version__
-        return __version__
+    if os.path.exists(os.path.join(g_base_path, "comfyui_version.py")):
+        # from comfyui_version import __version__
+        # return __version__
+        # use regex to extract version
+        with open(os.path.join(g_base_path, "comfyui_version.py")) as f:
+            version = re.search(r'__version__ = "(.*?)"', f.read()).group(1)
+            return version
     return "unknown"
 
 def create_client():
@@ -103,19 +121,25 @@ def _log_error(message, e):
     else:
         print(f"{g_logger_prefix} {message} {type(e)} {e}", flush=True)
 
-def load_config(agent=None, default_config=None):
-    global DEVICE_ID, g_config, g_logger_prefix
+def load_config(agent=None, default_config=None, use_paths=None):
+    global DEVICE_ID, g_config, g_logger_prefix, g_base_path, g_paths
     g_config = default_config or {'enabled': False}
+
+    if use_paths is not None:
+        if isinstance(use_paths, Paths):
+            g_paths = use_paths
+        else:
+            g_paths = Paths(use_paths)
 
     if agent is not None:
         g_logger_prefix = f"[{agent}]"
         g_headers["User-Agent"] = g_headers_json["User-Agent"] = f"{agent}/{get_comfyui_version()}/{VERSION}/{DEVICE_ID}"
 
     try:
-        os.makedirs(g_node_dir, exist_ok=True)
+        os.makedirs(g_paths.agent, exist_ok=True)
 
         # Read device ID from users/device-id
-        device_id_path = os.path.join(g_node_dir, "device-id")
+        device_id_path = os.path.join(g_paths.agent, "device-id")
         # check if file exists
         if os.path.isfile(device_id_path):
             with open(device_id_path) as f:
@@ -133,7 +157,7 @@ def load_config(agent=None, default_config=None):
 
     try:
         _log("Loading config...")
-        config_path = os.path.join(g_node_dir, "config.json")
+        config_path = os.path.join(g_paths.agent, "config.json")
         if not os.path.exists(config_path):
             return
         with open(config_path, "r") as f:
@@ -144,10 +168,10 @@ def load_config(agent=None, default_config=None):
 def save_config(config):
     global g_config
     g_config.update(config)
-    os.makedirs(g_node_dir, exist_ok=True)
+    os.makedirs(g_paths.agent, exist_ok=True)
     _log("Saving config...")
     # _log("Saving config: " + json.dumps(g_config))
-    with open(os.path.join(g_node_dir, "config.json"), "w") as f:
+    with open(os.path.join(g_paths.agent, "config.json"), "w") as f:
         json.dump(g_config, f, indent=4)
 
 def detect_python_environment():
