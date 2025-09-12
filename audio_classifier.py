@@ -74,7 +74,7 @@ def classify_with_process_timeout(classifier, audio_clip, timeout_seconds=30):
         process.join(timeout=5)  # Give it 5 seconds to terminate gracefully
         if process.is_alive():
             process.kill()  # Force kill if still alive
-        return None
+        raise TimeoutError(f"Classification timed out after {timeout_seconds} seconds")
 
     # Get the result if available
     try:
@@ -83,12 +83,13 @@ def classify_with_process_timeout(classifier, audio_clip, timeout_seconds=30):
             if status == 'success':
                 return result
             else:
-                print(f"Warning: Classification failed in process: {result}", flush=True)
-                return None
-    except:
+                raise Exception(f"Classification failed in process: {result}")
+    except Exception as e:
+        if "Classification failed in process" in str(e):
+            raise e
         pass
 
-    return None
+    raise Exception("Classification process completed but no result was returned")
 
 def convert_to_wav_data(audio_path, format):
     """Convert M4A AAC audio file to WAV format data for MediaPipe."""
