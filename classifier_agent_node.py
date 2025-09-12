@@ -17,7 +17,11 @@ def start(use_paths=None):
     # run subprocess, piping stdout and stderr to os
     load_config(agent="classifier-agent", use_paths=use_paths)
     _log(f"Starting classifier agent with command: {' '.join(cmd)}")
-    subprocess.Popen(cmd)
+    try:
+        subprocess.Popen(cmd)
+        _log("Started classifier agent")
+    except Exception as e:
+        _log(f"Error starting classifier agent: {e}")
 
 start(use_paths=Paths(base = base_path,
                       models = models_dir,
