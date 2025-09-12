@@ -63,8 +63,8 @@ def process_audio_segments(classifier, wav_data, sample_rate, segment_duration_m
     category_counts = Counter()
 
     if debug:
-        print(f"Processing audio file ({audio_duration_ms/1000:.1f} seconds)...")
-        print(f"Segment duration: {segment_duration_ms}ms")
+        print(f"Processing audio file ({audio_duration_ms/1000:.1f} seconds)...", flush=True)
+        print(f"Segment duration: {segment_duration_ms}ms", flush=True)
 
     # Process audio in overlapping segments
     for start_ms in range(0, audio_duration_ms, segment_duration_ms):
@@ -111,7 +111,7 @@ def process_audio_segments(classifier, wav_data, sample_rate, segment_duration_m
                 all_classifications.append(segment_info)
 
         except Exception as e:
-            print(f"Warning: Failed to classify segment at {start_ms}ms: {e}")
+            print(f"Warning: Failed to classify segment at {start_ms}ms: {e}", flush=True)
             continue
 
     return all_classifications, category_scores, category_counts
