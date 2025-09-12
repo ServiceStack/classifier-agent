@@ -215,48 +215,43 @@ def process_audio_segments(classifier, wav_data, sample_rate, segment_duration_m
         audio_clip = containers.AudioData.create_from_array(
             segment_data.astype(float) / np.iinfo(np.int16).max, sample_rate)
 
-        try:
-            started_at = time.time()
-            if debug:
-                print("[classifier-agent] Classifying segment...", flush=True)
-            classification_results = classify_with_process_timeout(classifier, audio_clip, timeout_seconds=10)
+        started_at = time.time()
+        if debug:
+            print("[classifier-agent] Classifying segment...", flush=True)
+        classification_results = classify_with_process_timeout(classifier, audio_clip, timeout_seconds=10)
 
-            if classification_results is None:
-                # Skip this segment if classification failed or timed out
-                continue
-
-            if debug:
-                print(f"[classifier-agent] Classified in {time.time() - started_at:.2f}s", flush=True)
-
-            # Process each classification result (MediaPipe may return multiple results per segment)
-            for classification_result in classification_results:
-                timestamp = start_ms
-                classifications = classification_result.classifications[0].categories
-
-                # Store all categories for this timestamp
-                segment_info = {
-                    'timestamp': timestamp,
-                    'categories': []
-                }
-
-                for category in classifications:
-                    category_name = category.category_name
-                    score = category.score
-
-                    segment_info['categories'].append({
-                        'name': category_name,
-                        'score': score
-                    })
-
-                    # Accumulate scores and counts
-                    category_scores[category_name].append(score)
-                    category_counts[category_name] += 1
-
-                all_classifications.append(segment_info)
-
-        except Exception as e:
-            print(f"Warning: Failed to classify segment at {start_ms}ms: {e}", flush=True)
+        if classification_results is None:
+            # Skip this segment if classification failed or timed out
             continue
+
+        if debug:
+            print(f"[classifier-agent] Classified in {time.time() - started_at:.2f}s", flush=True)
+
+        # Process each classification result (MediaPipe may return multiple results per segment)
+        for classification_result in classification_results:
+            timestamp = start_ms
+            classifications = classification_result.classifications[0].categories
+
+            # Store all categories for this timestamp
+            segment_info = {
+                'timestamp': timestamp,
+                'categories': []
+            }
+
+            for category in classifications:
+                category_name = category.category_name
+                score = category.score
+
+                segment_info['categories'].append({
+                    'name': category_name,
+                    'score': score
+                })
+
+                # Accumulate scores and counts
+                category_scores[category_name].append(score)
+                category_counts[category_name] += 1
+
+            all_classifications.append(segment_info)
 
     return all_classifications, category_scores, category_counts
 
