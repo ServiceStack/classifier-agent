@@ -9,8 +9,7 @@ import requests
 import json
 import asyncio
 import concurrent.futures
-import signal
-from contextlib import contextmanager
+
 
 from collections import defaultdict, Counter
 
@@ -20,34 +19,25 @@ from mediapipe.tasks.python import audio
 from scipy.io import wavfile
 from pydub import AudioSegment
 
-@contextmanager
-def timeout_context(seconds):
-    """Context manager that raises TimeoutError after specified seconds."""
-    def timeout_handler(signum, frame):
-        raise TimeoutError(f"Operation timed out after {seconds} seconds")
-
-    # Set the signal handler and a alarm for the specified seconds
-    old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(seconds)
-
-    try:
-        yield
-    finally:
-        # Restore the old signal handler and cancel the alarm
-        signal.signal(signal.SIGALRM, old_handler)
-        signal.alarm(0)
-
 def classify_with_timeout(classifier, audio_clip, timeout_seconds=30):
-    """Classify audio with a timeout mechanism."""
-    try:
-        with timeout_context(timeout_seconds):
-            return classifier.classify(audio_clip)
-    except TimeoutError as e:
-        print(f"Warning: Classification timed out after {timeout_seconds}s: {e}", flush=True)
-        return None
-    except Exception as e:
-        print(f"Warning: Classification failed: {e}", flush=True)
-        return None
+    """Classify audio with a timeout mechanism using thread-based approach."""
+    def _classify():
+        return classifier.classify(audio_clip)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(_classify)
+        try:
+            # Wait for the result with timeout
+            result = future.result(timeout=timeout_seconds)
+            return result
+        except concurrent.futures.TimeoutError:
+            print(f"Warning: Classification timed out after {timeout_seconds}s", flush=True)
+            # Cancel the future (though it may not stop the underlying operation)
+            future.cancel()
+            return None
+        except Exception as e:
+            print(f"Warning: Classification failed: {e}", flush=True)
+            return None
 
 def convert_to_wav_data(audio_path, format):
     """Convert M4A AAC audio file to WAV format data for MediaPipe."""
