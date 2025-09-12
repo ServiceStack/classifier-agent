@@ -14,11 +14,11 @@ from contextlib import contextmanager
 
 from collections import defaultdict, Counter
 
-
-class TimeoutError(Exception):
-    """Custom timeout exception."""
-    pass
-
+from mediapipe.tasks import python
+from mediapipe.tasks.python.components import containers
+from mediapipe.tasks.python import audio
+from scipy.io import wavfile
+from pydub import AudioSegment
 
 @contextmanager
 def timeout_context(seconds):
@@ -37,7 +37,6 @@ def timeout_context(seconds):
         signal.signal(signal.SIGALRM, old_handler)
         signal.alarm(0)
 
-
 def classify_with_timeout(classifier, audio_clip, timeout_seconds=30):
     """Classify audio with a timeout mechanism."""
     try:
@@ -49,11 +48,6 @@ def classify_with_timeout(classifier, audio_clip, timeout_seconds=30):
     except Exception as e:
         print(f"Warning: Classification failed: {e}", flush=True)
         return None
-from mediapipe.tasks import python
-from mediapipe.tasks.python.components import containers
-from mediapipe.tasks.python import audio
-from scipy.io import wavfile
-from pydub import AudioSegment
 
 def convert_to_wav_data(audio_path, format):
     """Convert M4A AAC audio file to WAV format data for MediaPipe."""
