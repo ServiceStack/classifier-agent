@@ -159,7 +159,7 @@ def process_audio_segments(classifier, wav_data, sample_rate, segment_duration_m
             started_at = time.time()
             if debug:
                 print("[classifier-agent] Classifying segment...", flush=True)
-            classification_results = classify_with_timeout(classifier, audio_clip, timeout_seconds=30)
+            classification_results = classify_with_process_timeout(classifier, audio_clip, timeout_seconds=30)
 
             if classification_results is None:
                 # Skip this segment if classification failed or timed out
