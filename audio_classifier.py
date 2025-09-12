@@ -43,17 +43,43 @@ def classify_with_timeout(classifier, audio_clip, timeout_seconds=30):
 def classify_with_process_timeout(classifier, audio_clip, timeout_seconds=30):
     """Alternative timeout approach using multiprocessing (more aggressive)."""
     import multiprocessing
-    import pickle
+    import os
 
-    def _classify_in_process(classifier_data, audio_data, result_queue):
+    def _classify_in_process(model_path, audio_data, sample_rate, result_queue):
         """Function to run classification in a separate process."""
         try:
-            # Recreate classifier and audio_clip in the new process
-            # Note: This is a simplified approach - you may need to adjust based on MediaPipe's serialization
-            result = classifier.classify(audio_clip)
+            # Recreate classifier in the new process
+            from mediapipe.tasks import python
+            from mediapipe.tasks.python import audio
+            from mediapipe.tasks.python.components import containers
+            import numpy as np
+
+            base_options = python.BaseOptions(model_asset_path=model_path)
+            audio_options = audio.AudioClassifierOptions(
+                base_options=base_options, max_results=10)
+            new_classifier = audio.AudioClassifier.create_from_options(audio_options)
+
+            # Recreate audio clip
+            new_audio_clip = containers.AudioData.create_from_array(audio_data, sample_rate)
+
+            # Perform classification
+            result = new_classifier.classify(new_audio_clip)
             result_queue.put(('success', result))
         except Exception as e:
             result_queue.put(('error', str(e)))
+
+    # Get model path and audio data for serialization
+    try:
+        # Extract model path from classifier (this is a bit hacky but necessary)
+        models_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../../models")
+        classifiers_path = os.path.join(models_dir, 'classifiers')
+        model_path = os.path.join(classifiers_path, 'classifier.tflite')
+
+        # Extract audio data
+        audio_data = audio_clip.buffer
+        sample_rate = audio_clip.audio_format.sample_rate
+    except Exception as e:
+        raise Exception(f"Failed to extract classifier/audio data for multiprocessing: {e}")
 
     # Create a queue for results
     result_queue = multiprocessing.Queue()
@@ -61,7 +87,7 @@ def classify_with_process_timeout(classifier, audio_clip, timeout_seconds=30):
     # Start the classification process
     process = multiprocessing.Process(
         target=_classify_in_process,
-        args=(classifier, audio_clip, result_queue)
+        args=(model_path, audio_data, sample_rate, result_queue)
     )
     process.start()
 
@@ -90,6 +116,39 @@ def classify_with_process_timeout(classifier, audio_clip, timeout_seconds=30):
         pass
 
     raise Exception("Classification process completed but no result was returned")
+
+
+def classify_with_simple_timeout(classifier, audio_clip, timeout_seconds=10):
+    """Simple timeout approach - just skip if it takes too long."""
+    import threading
+    import time
+
+    result = [None]
+    exception = [None]
+
+    def _classify():
+        try:
+            result[0] = classifier.classify(audio_clip)
+        except Exception as e:
+            exception[0] = e
+
+    thread = threading.Thread(target=_classify)
+    thread.daemon = True  # Dies when main thread dies
+    thread.start()
+    thread.join(timeout=timeout_seconds)
+
+    if thread.is_alive():
+        # Thread is still running, consider it timed out
+        raise TimeoutError(f"Classification timed out after {timeout_seconds} seconds")
+
+    if exception[0]:
+        raise exception[0]
+
+    if result[0] is None:
+        raise Exception("Classification completed but returned no result")
+
+    return result[0]
+
 
 def convert_to_wav_data(audio_path, format):
     """Convert M4A AAC audio file to WAV format data for MediaPipe."""
@@ -160,7 +219,7 @@ def process_audio_segments(classifier, wav_data, sample_rate, segment_duration_m
             started_at = time.time()
             if debug:
                 print("[classifier-agent] Classifying segment...", flush=True)
-            classification_results = classify_with_process_timeout(classifier, audio_clip, timeout_seconds=30)
+            classification_results = classify_with_process_timeout(classifier, audio_clip, timeout_seconds=10)
 
             if classification_results is None:
                 # Skip this segment if classification failed or timed out
