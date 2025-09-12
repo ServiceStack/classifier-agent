@@ -142,7 +142,7 @@ def listen_to_messages_poll():
                                     try:
                                         start_time = time.time()
                                         g_audio_model = load_audio_model(models_dir=paths().models)
-                                        _log(f"Loaded audio model in {time.time() - start_time:.2f}s")
+                                        _log(f"Loaded audio model ({'OK' if g_audio_model is not None else 'FAIL'}) in {time.time() - start_time:.2f}s")
                                     except Exception as ex:
                                         _log(f"Error loading audio model: {ex}")
 
