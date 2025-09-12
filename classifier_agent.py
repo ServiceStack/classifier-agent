@@ -141,6 +141,7 @@ def listen_to_messages_poll():
                                 if g_audio_model is None:
                                     try:
                                         start_time = time.time()
+                                        _log(f"Converting audio to wav: {task.url}")
                                         g_audio_model = load_audio_model(models_dir=paths().models)
                                         _log(f"Loaded audio model in {time.time() - start_time:.2f}s")
                                     except Exception as ex:
