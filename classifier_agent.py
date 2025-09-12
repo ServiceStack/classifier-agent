@@ -158,6 +158,8 @@ def listen_to_messages_poll():
                                         _log(f"Classified {type} Artifact {task.id} with {len(update.tags)} tags in {time.time() - start_time:.2f}s")
                                     except Exception as ex:
                                         _log(f"Error getting audio tags: {ex}")
+                                else:
+                                    _log("No audio model loaded")
 
                         else:
                             update.error = ResponseStatus(errorCode="NotImplemented", message=f"Unsupported artifact type: {task.type}")
