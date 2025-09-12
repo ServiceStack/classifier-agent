@@ -39,6 +39,57 @@ def classify_with_timeout(classifier, audio_clip, timeout_seconds=30):
             print(f"Warning: Classification failed: {e}", flush=True)
             return None
 
+
+def classify_with_process_timeout(classifier, audio_clip, timeout_seconds=30):
+    """Alternative timeout approach using multiprocessing (more aggressive)."""
+    import multiprocessing
+    import pickle
+
+    def _classify_in_process(classifier_data, audio_data, result_queue):
+        """Function to run classification in a separate process."""
+        try:
+            # Recreate classifier and audio_clip in the new process
+            # Note: This is a simplified approach - you may need to adjust based on MediaPipe's serialization
+            result = classifier.classify(audio_clip)
+            result_queue.put(('success', result))
+        except Exception as e:
+            result_queue.put(('error', str(e)))
+
+    # Create a queue for results
+    result_queue = multiprocessing.Queue()
+
+    # Start the classification process
+    process = multiprocessing.Process(
+        target=_classify_in_process,
+        args=(classifier, audio_clip, result_queue)
+    )
+    process.start()
+
+    # Wait for the process to complete or timeout
+    process.join(timeout=timeout_seconds)
+
+    if process.is_alive():
+        print(f"Warning: Classification process timed out after {timeout_seconds}s, terminating...", flush=True)
+        process.terminate()
+        process.join(timeout=5)  # Give it 5 seconds to terminate gracefully
+        if process.is_alive():
+            process.kill()  # Force kill if still alive
+        return None
+
+    # Get the result if available
+    try:
+        if not result_queue.empty():
+            status, result = result_queue.get_nowait()
+            if status == 'success':
+                return result
+            else:
+                print(f"Warning: Classification failed in process: {result}", flush=True)
+                return None
+    except:
+        pass
+
+    return None
+
 def convert_to_wav_data(audio_path, format):
     """Convert M4A AAC audio file to WAV format data for MediaPipe."""
     # Load the M4A file using pydub
