@@ -19,7 +19,6 @@ from pydub import AudioSegment
 def convert_to_wav_data(audio_path, format):
     """Convert M4A AAC audio file to WAV format data for MediaPipe."""
     # Load the M4A file using pydub
-    print(f"Converting audio to wav: {audio_path}")
     audio_segment = AudioSegment.from_file(audio_path, format=format)
 
     # Convert to mono if stereo
@@ -32,7 +31,6 @@ def convert_to_wav_data(audio_path, format):
     # Convert to 16-bit PCM
     audio_segment = audio_segment.set_sample_width(2)
 
-    print(f"Converted audio to wav: {audio_segment.frame_rate}Hz")
     # Get raw audio data as numpy array
     raw_data = audio_segment.raw_data
     wav_data = np.frombuffer(raw_data, dtype=np.int16)
@@ -134,7 +132,7 @@ def get_audio_tags(classifier, audio_path, debug=None):
 def get_audio_tags_from_wav(classifier, sample_rate, wav_data, debug=None):
     # Process the entire audio file in segments
     all_classifications, category_scores, category_counts = process_audio_segments(
-        classifier, wav_data, sample_rate, segment_duration_ms=975
+        classifier, wav_data, sample_rate, segment_duration_ms=975, debug=debug
     )
     max_count = max(category_counts.values())
     max_count = int(max_count * 1.1)
