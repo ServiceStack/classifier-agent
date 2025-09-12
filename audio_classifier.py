@@ -9,8 +9,46 @@ import requests
 import json
 import asyncio
 import concurrent.futures
+import signal
+from contextlib import contextmanager
 
 from collections import defaultdict, Counter
+
+
+class TimeoutError(Exception):
+    """Custom timeout exception."""
+    pass
+
+
+@contextmanager
+def timeout_context(seconds):
+    """Context manager that raises TimeoutError after specified seconds."""
+    def timeout_handler(signum, frame):
+        raise TimeoutError(f"Operation timed out after {seconds} seconds")
+
+    # Set the signal handler and a alarm for the specified seconds
+    old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(seconds)
+
+    try:
+        yield
+    finally:
+        # Restore the old signal handler and cancel the alarm
+        signal.signal(signal.SIGALRM, old_handler)
+        signal.alarm(0)
+
+
+def classify_with_timeout(classifier, audio_clip, timeout_seconds=30):
+    """Classify audio with a timeout mechanism."""
+    try:
+        with timeout_context(timeout_seconds):
+            return classifier.classify(audio_clip)
+    except TimeoutError as e:
+        print(f"Warning: Classification timed out after {timeout_seconds}s: {e}", flush=True)
+        return None
+    except Exception as e:
+        print(f"Warning: Classification failed: {e}", flush=True)
+        return None
 from mediapipe.tasks import python
 from mediapipe.tasks.python.components import containers
 from mediapipe.tasks.python import audio
@@ -85,8 +123,12 @@ def process_audio_segments(classifier, wav_data, sample_rate, segment_duration_m
         try:
             started_at = time.time()
             if debug:
-                print(f"[classifier-agent] Classifying segment at {start_ms}ms", flush=True)
-            classification_results = classifier.classify(audio_clip)
+                print("[classifier-agent] Classifying segment...", flush=True)
+            classification_results = classify_with_timeout(classifier, audio_clip, timeout_seconds=30)
+
+            if classification_results is None:
+                # Skip this segment if classification failed or timed out
+                continue
 
             if debug:
                 print(f"[classifier-agent] Classified in {time.time() - started_at:.2f}s", flush=True)
