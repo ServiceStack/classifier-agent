@@ -63,8 +63,8 @@ def process_audio_segments(classifier, wav_data, sample_rate, segment_duration_m
     category_counts = Counter()
 
     if debug:
-        print(f"Processing audio file ({audio_duration_ms/1000:.1f} seconds)...", flush=True)
-        print(f"Segment duration: {segment_duration_ms}ms", flush=True)
+        print(f"[classifier-agent] Processing audio file ({audio_duration_ms/1000:.1f} seconds)...", flush=True)
+        print(f"[classifier-agent] Segment duration: {segment_duration_ms}ms", flush=True)
 
     # Process audio in overlapping segments
     for start_ms in range(0, audio_duration_ms, segment_duration_ms):
@@ -82,7 +82,13 @@ def process_audio_segments(classifier, wav_data, sample_rate, segment_duration_m
             segment_data.astype(float) / np.iinfo(np.int16).max, sample_rate)
 
         try:
+            started_at = time.time()
+            if debug:
+                print(f"[classifier-agent] Classifying segment at {start_ms}ms", flush=True)
             classification_results = classifier.classify(audio_clip)
+
+            if debug:
+                print(f"[classifier-agent] Classified in {time.time() - started_at:.2f}s", flush=True)
 
             # Process each classification result (MediaPipe may return multiple results per segment)
             for classification_result in classification_results:
