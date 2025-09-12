@@ -19,6 +19,7 @@ from pydub import AudioSegment
 def convert_to_wav_data(audio_path, format):
     """Convert M4A AAC audio file to WAV format data for MediaPipe."""
     # Load the M4A file using pydub
+    print(f"Converting audio to wav: {audio_path}")
     audio_segment = AudioSegment.from_file(audio_path, format=format)
 
     # Convert to mono if stereo
@@ -31,6 +32,7 @@ def convert_to_wav_data(audio_path, format):
     # Convert to 16-bit PCM
     audio_segment = audio_segment.set_sample_width(2)
 
+    print(f"Converted audio to wav: {audio_segment.frame_rate}Hz")
     # Get raw audio data as numpy array
     raw_data = audio_segment.raw_data
     wav_data = np.frombuffer(raw_data, dtype=np.int16)

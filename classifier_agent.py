@@ -153,6 +153,7 @@ def listen_to_messages_poll():
                                         format = file_ext[1:]
                                         _log(f"Converting audio to wav: {task.url}")
                                         sample_rate, wav_data = convert_to_wav_data(io.BytesIO(response.content), format=format)
+                                        _log(f"Getting audio tags: {task.url}")
                                         tags = get_audio_tags_from_wav(g_audio_model, sample_rate, wav_data, debug=True)  # noqa: F821
                                         update.tags = tags
                                         _log(f"Classified {type} Artifact {task.id} with {len(update.tags)} tags in {time.time() - start_time:.2f}s")
